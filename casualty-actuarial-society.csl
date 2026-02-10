@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl"
+       version="1.0"
+       class="author-date"
+       default-locale="en-US">
+
+  <info>
+    <title>Casualty Actuarial Society (Full First Names)</title>
+    <id>http://www.casact.org/styles/csl-full-names</id>
+    <author>
+      <name>Custom CAS-style CSL</name>
+    </author>
+    <category citation-format="author-date"/>
+    <summary>Author-date style for CAS publications using full first names</summary>
+    <updated>2026-02-09</updated>
+  </info>
+
+  <!-- In-text citations -->
+  <citation>
+    <layout prefix="(" suffix=")" delimiter="; ">
+      <group delimiter=", ">
+        <text variable="author"/>
+        <text variable="issued" form="year"/>
+      </group>
+    </layout>
+  </citation>
+
+  <!-- Bibliography -->
+  <bibliography hanging-indent="true" entry-spacing="0" line-spacing="1">
+    <sort>
+      <key variable="author"/>
+      <key variable="issued"/>
+    </sort>
+
+    <layout suffix=".">
+      <!-- Authors: full first names -->
+      <names variable="author">
+        <name name-as-sort-order="all"
+              sort-separator=", "
+              delimiter=", "
+              delimiter-precedes-last="always"/>
+      </names>
+
+      <!-- Year -->
+      <text variable="issued" prefix=" (" suffix=")."/>
+
+      <!-- Title -->
+      <text variable="title" prefix=" "/>
+
+      <!-- Journal / Book -->
+      <group prefix=" ">
+        <text variable="container-title" font-style="italic"/>
+        <group prefix=", ">
+          <text variable="volume"/>
+        </group>
+        <group prefix=", ">
+          <text variable="page"/>
+        </group>
+      </group>
+    </layout>
+  </bibliography>
+
+</style>

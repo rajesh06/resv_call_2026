@@ -1,0 +1,88 @@
+---
+title: "A Bayesian Approach to Address Changes in Claims Handling"
+author: "Rajesh Sahasrabuddhe, FCAS, FCIA, MAAA"
+date: today
+abstract: |
+  The seminal paper by James R. Berquist and Richard E. Sherman provided systematic methods for adjusting claim triangles to account for changes in claims handling. Those methods highlighted the dependency of future development on case reserve adequacy and claim settlement rates. The Berquist-Sherman method relies on restating claim triangles, rather than modeling the dependency. In this paper, we present a Bayesian approach for considering changes in claims handling when estimating unpaid claims.
+format: 
+  pdf:
+    toc: true
+    number-sections: true
+    colorlinks: true
+    header-includes:
+      - \usepackage[document]{ragged2e}
+    keep-tex: true
+bibliography: references.bib
+---
+
+## Introduction
+
+\begin{quote}
+It's tough to make predictions, especially about the future. 
+- Yogi Berra
+\end{quote}
+
+In any actuarial analysis, we need to assess the predictive value of historical data in predicting the quantity of interest. In Loss Reserve Adequacy Testing: A Comprehensive, Systematic Approach[@berquist_sherman_1977], James R. Berquist and Richard E. Sherman described various investigations that the actuary should undertake to assess the predictive value. The paper then focuses on two particular sources of changes in the historical data:
+
+-   Changes in case reserve adequacy
+-   Changes in the claims settlement rate
+
+Berquist and Sherman propose approaches to detect such changes and then adjust the data to address data distortions.
+
+The goal of the approach we present in this paper is to measure dependency to improve the prediction of future emergence for the specific claims portfolio. Actuaries generally measure dependency using a linear model. This would likely be problematic with a claims triangle, as there are a limited number of data points relative to the number of parameters. This could result in overfitting or a situation where the model does not properly isolate the effect of each component of development. In the proposed approach, we fit a model for emergence using Bayesian techniques. We will use the interpretation of the coefficient to establish prior distributions for each coefficient and address the modeling concerns described above.
+
+## Literature Review
+
+The seminal work by Berquist and Sherman introduced deterministic methods to adjust loss development triangles for shifts in settlement rates and case reserve adequacy. While their methods remain industry standards, they lack a formal probabilistic framework for quantifying uncertainty.
+
+## Methodology
+
+```{r}
+#| label: data
+#| include: false
+
+mat_names <- list('ay' = paste0('ay_', 1969:1976), age = c('age_12', 'age_24'))
+
+# B-S Exhibit A
+incd <- matrix(data = c(
+  c(2897, 4828, 5455, 8732, 11228, 8706, 12928, 15791),
+  c(5160, 10707, 11942, 18633, 19967, 33459, 48904, NA)), 
+  nrow = 8, byrow = FALSE, dimnames = mat_names)
+
+# B-S Exhibit C
+paid_clsd <- matrix(data = c(
+  c(402, 110, 706, 161, 724, 518, 517, 525),
+  c(539, 919, 1115, 862, 541, 1394, 1494, NA)), 
+  nrow = 8, byrow = FALSE, dimnames = mat_names)
+
+# B-S Exhibit D
+open <- matrix(data = c(
+  c(749, 660, 878, 1043, 1088, 1033, 1138, 1196),
+  c(840, 957, 1329, 1561, 1388, 1418, 1472, NA)), 
+  nrow = 8, byrow = FALSE, dimnames = mat_names)
+
+# B-S Exhibit E
+paid <- matrix(data = c(
+  c(125, 43, 295, 50, 213, 172, 210, 209),
+  c(406, 529, 1147, 786, 833, 1587, 1565, NA)), 
+  nrow = 8, byrow = FALSE, dimnames = mat_names)
+
+avg_clsd <- paid / paid_clsd * 1e3 |> round()
+
+avg_case <- ((incd - paid) / open * 1e3) |> round()
+```
+
+We propose a Bayesian hierarchical model to formalize the adjustments. Let $C_{i,j}$ denote the cumulative claims for accident year $i$ and development period $j$. We assume:
+
+$$C_{i,j} \sim \text{Log-Normal}(\mu_{i,j}, \sigma^2)$$
+
+Where the parameter $\mu_{i,j}$ is conditioned on a "settlement speed" factor, allowing the model to transition smoothly between different claims-handling regimes.
+
+## Discussion
+
+Unlike the original Berquist-Sherman approach, the Bayesian method allows for the inclusion of prior expert judgment regarding the magnitude of the operational change.
+
+## References
+
+::: {#refs}
+:::
