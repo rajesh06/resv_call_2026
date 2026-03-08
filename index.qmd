@@ -3,7 +3,7 @@ title: "A Bayesian Approach to Address Changes in Claims Handling"
 author: "Rajesh Sahasrabuddhe, FCAS, FCIA, MAAA"
 date: today
 abstract: |
-  The seminal paper by James R. Berquist and Richard E. Sherman provided systematic methods for adjusting claim triangles to account for changes in claims handling. Those methods highlighted the dependency of future development on case reserve adequacy and claim settlement rates. The Berquist-Sherman method relies on restating claim triangles, rather than modeling the dependency. In this paper, we present a Bayesian approach for considering changes in claims handling when estimating unpaid claims.
+  The seminal paper by James R. Berquist and Richard E. Sherman provided systematic methods for adjusting claim triangles to account for changes in claims handling. Those methods highlighted the dependency of future development on case reserve adequacy and claim settlement rates. The Berquist-Sherman method relies on restating claim triangles, rather than modeling the dependency. In this paper, we present a Bayesian approach to modeling the dependency in order to considering changes in claims handling when estimating unpaid claims.
 format: 
   pdf:
     toc: true
@@ -15,6 +15,10 @@ format:
 bibliography: references.bib
 ---
 
+```{=latex}
+\newcommand*{\bs}{Berquist-Sherman }
+```
+
 ## Introduction
 
 \begin{quote}
@@ -22,26 +26,71 @@ It's tough to make predictions, especially about the future.
 - Yogi Berra
 \end{quote}
 
-In any actuarial analysis, we need to assess the predictive value of historical data in predicting the quantity of interest. In Loss Reserve Adequacy Testing: A Comprehensive, Systematic Approach[@berquist_sherman_1977], James R. Berquist and Richard E. Sherman described various investigations that the actuary should undertake to assess the predictive value. The paper then focuses on two particular sources of changes in the historical data:
+In an actuarial analysis, we need to assess the predictive value of historical data in predicting the quantity of interest. In Loss Reserve Adequacy Testing: A Comprehensive, Systematic Approach [@berquist_sherman_1977], James R. Berquist and Richard E. Sherman described various investigations that the actuary should undertake to understand (potential) changes in operations that might affect the predictive value of the data.
+
+Berquist and Sherman propose approaches to detect such changes and then adjust the data to address data distortions. They focus on two particular sources of changes in the historical data:
 
 -   Changes in case reserve adequacy
 -   Changes in the claims settlement rate
 
-Berquist and Sherman propose approaches to detect such changes and then adjust the data to address data distortions.
+In each case, they propose an approach to adjust the data to consider these changes in the estimation of unpaid claims.
 
-The goal of the approach we present in this paper is to measure dependency to improve the prediction of future emergence for the specific claims portfolio. Actuaries generally measure dependency using a linear model. This would likely be problematic with a claims triangle, as there are a limited number of data points relative to the number of parameters. This could result in overfitting or a situation where the model does not properly isolate the effect of each component of development. In the proposed approach, we fit a model for emergence using Bayesian techniques. We will use the interpretation of the coefficient to establish prior distributions for each coefficient and address the modeling concerns described above.
+The goal of the approach we present in this paper is to include the dependency in the unpaid claim estimation model. Actuaries generally model dependency using a linear model. This is likely to be problematic with a claims triangle, as there are a limited number of data points relative to the number of parameters. This could result in overfitting or situations where the model does not properly isolate the effect of each of the independent variables.
 
-## Literature Review
+In the approach proposed in this paper, we fit a model for emergence using Bayesian techniques. We will use the interpretation of the coefficient to establish prior distributions for each coefficient and address the modeling concerns described above.
 
-The seminal work by Berquist and Sherman introduced deterministic methods to adjust loss development triangles for shifts in settlement rates and case reserve adequacy. While their methods remain industry standards, they lack a formal probabilistic framework for quantifying uncertainty.
+We present our proposed model using data from Berquist-Sherman to allow the reader to compare the proposed approach with the Berquist-Sherman baseline. The `R` code underlying this paper is available in a [code repository](https://github.com/rajesh06/resv_call_2026) \[Note to reviewers, I will move this to the CAS GitHub upon completion.\] Conveniently, the `ChainLadder` [@ChainLadder] package includes the data used in Berquist-Sherman.
 
-## Methodology
+```{r}
+med_mal <- ChainLadder::MedMal
+names(med_mal) <- c('rept', 'paid', 'case', 'open')
+med_mal$avg_case <- (med_mal$rept - med_mal$paid) / med_mal$open
+
+med_mal$adj_avg_case <- ChainLadder::inflateTriangle(Triangle =
+     med_mal$avg_case, rate = 0.15)
+med_mal$adj_rept <- med_mal$adj_avg_case * med_mal$open + med_mal$paid
+
+# Add row and column names
+med_mal <- sapply(X = names(med_mal), FUN = function(data_type){
+  this_matrix <- med_mal[[data_type]]
+  dimnames(this_matrix) <- list('ay' = paste0('ay_', 1969:1976),
+     'age' = paste0('age_', 12 * 1:8))
+  return(this_matrix)
+}, simplify = FALSE, USE.NAMES = TRUE)
+
+med_mal$adj_rept_df <- med_mal$adj_rept[, 2:8] / med_mal$adj_rept[, 1:7]
+
+colnames(med_mal$adj_rept_df) <- paste0('age_', 12 * 1:7, '_', 12 * 2:8)
+ 
+bs_ult <- function(rptd, paid, row_names = NULL) {
+  no_cols <- dim(rptd)[2]
+  df_mat <- rptd[, 2:no_cols] / rptd[, 1:(no_cols - 1)]
+  ata <- apply(X = df_mat, MARGIN = 2, FUN = mean, na.rm = TRUE)
+  atu <- c(1, ata |> rev() |> cumprod())
+  latest_rptd <- sapply(X = 1:no_cols, function(x) rptd[x, no_cols + 1 - x])
+  latest_paid <- sapply(X = 1:no_cols, function(x) paid[x, no_cols + 1 - x])
+  ultimate <- latest_rptd * atu
+  matrix_out <- matrix(data = c(latest_rptd, atu, ultimate, latest_paid),
+    ncol = 4, byrow = FALSE)
+  matrix_out <- cbind(matrix_out, matrix_out[,1] * matrix_out[,2] -
+      matrix_out[,4])
+  colnames(matrix_out) <- c('rptd', 'atu', 'ult', 'paid', 'reserve')
+  rownames(matrix_out) <- row_names
+  return(matrix_out)
+  }
+
+bs_ult(rptd = med_mal$adj_rept, paid = med_mal$paid,
+  row_names = row.names(med_mal$rept))
+
+```
 
 ```{r}
 #| label: data
+#| eval: false
 #| include: false
 
-mat_names <- list('ay' = paste0('ay_', 1969:1976), age = c('age_12', 'age_24'))
+mat_names <- list('ay' = paste0('ay_', 1969:1976), 
+  'age' = paste0('age_', 12 * 1:8))
 
 # B-S Exhibit A
 incd <- matrix(data = c(
@@ -71,6 +120,64 @@ avg_clsd <- paid / paid_clsd * 1e3 |> round()
 
 avg_case <- ((incd - paid) / open * 1e3) |> round()
 ```
+
+```{r}
+#| eval: false
+#| include: false
+#| paged-print: true
+# Berquist-Sherman Exhibit A
+incd
+```
+
+```{r}
+#| eval: false
+#| include: false
+ay <- 1969:1976
+case <- c('ay_1969' = 3817, avg_case[2:8 ,1])
+model <- lm(formula = log(case) ~ ay)
+
+# Indicated Trend is 15.3%, See B-S Exhibit B
+(model$coefficients['ay'] |> exp() - 1 ) |> 
+  easyr::fmat(type = '%', digits = 1)
+
+# Selected Trend is 15.0%, See B-S Section III
+
+adjusted_case <- matrix(data = 
+    c(avg_case[8, 1] / 1.15 ^ (7:0), # age 12
+      avg_case[7, 2] / 1.15 ^ (6:0), NA), #age 24
+  ncol = 2, byrow = FALSE)
+
+# Restated Incurred - See B-S, Exhibit F
+(adjusted_case * open) / 1e3 + paid
+
+```
+
+## Literature Review
+
+The seminal work by \bs introduced deterministic methods to adjust loss development triangles for shifts in settlement rates and case reserve adequacy. While their methods remain industry standards, they lack a formal probabilistic framework for quantifying uncertainty.
+
+## Methodology
+
+We first examine the effect of changes in case reserve adequacy. \bs use medical malpractice data to illustrate their procedure. The underlying assumption of the \bs method is that development factors are a function of (i) the change in paid loss, (ii) the change in the number of open claims, and (iii) the change in case reserve adequacy, where case reserve adequacy is measured by the ratio of average case reserves, adjusted for inflation. \bs measure case reserve adequacy separately by development lag. However, we believe that it's reasonable to assume that case reserve adequacy is a calendar-year measure that affects all accident years/lags. We can express the observed development factors as in terms of the current average case reserves:
+
+\
+$$
+d_{i, j \to j+1} = 1 + \frac{p_{i, j \to j+1}+\bar{c}_{n,j+1}\times f_{i+j} \times (1+r)^{i+1-n}\times o_{i,j+1}-\bar{c}_{n,j}\times f_{i+j-1}\times (1+r)^{i-n}\times o_{i,j}}{p_{i,j}+\bar{c}_{n,j} \times f_{i+j-1} \times (1+r)^{i-n} \times o_{i,j}}
+$$ {#eq-ldf1}
+
+```{=latex}
+where\\
+$i \in (1, n)$ is the accident year index\\
+$j \in (1, m)$ is the development lag\\
+$r$ is the inflation rate\\
+$\bar{c}_{i,j}$ is the average case reserve\\
+$o_{i,j}$ is the number of open claims\\
+$p_{i,j}$ is the number of paid loss\\
+$f_a$ is the calendar year case reserve adequecy factor as the end of year $a$\\
+```
+
+
+In the \bs framework, the case reserve adequacy factors, $f$, and the inflation (trend) rate, $r$, are variables, whereas the other terms are fixed.
 
 We propose a Bayesian hierarchical model to formalize the adjustments. Let $C_{i,j}$ denote the cumulative claims for accident year $i$ and development period $j$. We assume:
 

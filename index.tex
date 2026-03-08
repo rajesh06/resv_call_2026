@@ -65,6 +65,46 @@
 \fi
 \makeatother
 
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{241,243,245}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.40,0.45,0.13}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\BuiltInTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\ExtensionTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.28,0.35,0.67}{#1}}
+\newcommand{\ImportTok}[1]{\textcolor[rgb]{0.00,0.46,0.62}{#1}}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.07,0.07,0.07}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
 
 \usepackage{longtable,booktabs,array}
 \usepackage{calc} % for calculating minipage widths
@@ -198,7 +238,7 @@
 
 \title{A Bayesian Approach to Address Changes in Claims Handling}
 \author{Rajesh Sahasrabuddhe, FCAS, FCIA, MAAA}
-\date{2026-02-09}
+\date{2026-03-08}
 \begin{document}
 \maketitle
 \begin{abstract}
@@ -208,8 +248,8 @@ in claims handling. Those methods highlighted the dependency of future
 development on case reserve adequacy and claim settlement rates. The
 Berquist-Sherman method relies on restating claim triangles, rather than
 modeling the dependency. In this paper, we present a Bayesian approach
-for considering changes in claims handling when estimating unpaid
-claims.
+to modeling the dependency in order to considering changes in claims
+handling when estimating unpaid claims.
 \end{abstract}
 
 \renewcommand*\contentsname{Table of contents}
@@ -219,6 +259,8 @@ claims.
 \tableofcontents
 }
 
+\newcommand*{\bs}{Berquist-Sherman }
+
 \section{Introduction}\label{introduction}
 
 \begin{quote}
@@ -226,13 +268,17 @@ It's tough to make predictions, especially about the future.
 - Yogi Berra
 \end{quote}
 
-In any actuarial analysis, we need to assess the predictive value of
+In an actuarial analysis, we need to assess the predictive value of
 historical data in predicting the quantity of interest. In Loss Reserve
-Adequacy Testing: A Comprehensive, Systematic Approach(Berquist and
+Adequacy Testing: A Comprehensive, Systematic Approach (Berquist and
 Sherman 1977), James R. Berquist and Richard E. Sherman described
-various investigations that the actuary should undertake to assess the
-predictive value. The paper then focuses on two particular sources of
-changes in the historical data:
+various investigations that the actuary should undertake to understand
+(potential) changes in operations that might affect the predictive value
+of the data.
+
+Berquist and Sherman propose approaches to detect such changes and then
+adjust the data to address data distortions. They focus on two
+particular sources of changes in the historical data:
 
 \begin{itemize}
 \tightlist
@@ -242,31 +288,124 @@ changes in the historical data:
   Changes in the claims settlement rate
 \end{itemize}
 
-Berquist and Sherman propose approaches to detect such changes and then
-adjust the data to address data distortions.
+In each case, they propose an approach to adjust the data to consider
+these changes in the estimation of unpaid claims.
 
-The goal of the approach we present in this paper is to measure
-dependency to improve the prediction of future emergence for the
-specific claims portfolio. Actuaries generally measure dependency using
-a linear model. This would likely be problematic with a claims triangle,
-as there are a limited number of data points relative to the number of
-parameters. This could result in overfitting or a situation where the
-model does not properly isolate the effect of each component of
-development. In the proposed approach, we fit a model for emergence
+The goal of the approach we present in this paper is to include the
+dependency in the unpaid claim estimation model. Actuaries generally
+model dependency using a linear model. This is likely to be problematic
+with a claims triangle, as there are a limited number of data points
+relative to the number of parameters. This could result in overfitting
+or situations where the model does not properly isolate the effect of
+each of the independent variables.
+
+In the approach proposed in this paper, we fit a model for emergence
 using Bayesian techniques. We will use the interpretation of the
 coefficient to establish prior distributions for each coefficient and
-address the modeling concerns described above. (Berquist and Sherman
-1977)
+address the modeling concerns described above.
+
+We present our proposed model using data from Berquist-Sherman to allow
+the reader to compare the proposed approach with the Berquist-Sherman
+baseline. The \texttt{R} code underlying this paper is available in a
+\href{https://github.com/rajesh06/resv_call_2026}{code repository}
+{[}Note to reviewers, I will move this to the CAS GitHub upon
+completion.{]} Conveniently, the \texttt{ChainLadder} (Gesmann et al.
+2024) package includes the data used in Berquist-Sherman.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{med\_mal }\OtherTok{\textless{}{-}}\NormalTok{ ChainLadder}\SpecialCharTok{::}\NormalTok{MedMal}
+\FunctionTok{names}\NormalTok{(med\_mal) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}rept\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}paid\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}case\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}open\textquotesingle{}}\NormalTok{)}
+\NormalTok{med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case }\OtherTok{\textless{}{-}}\NormalTok{ (med\_mal}\SpecialCharTok{$}\NormalTok{rept }\SpecialCharTok{{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{paid) }\SpecialCharTok{/}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{open}
+
+\NormalTok{med\_mal}\SpecialCharTok{$}\NormalTok{adj\_avg\_case }\OtherTok{\textless{}{-}}\NormalTok{ ChainLadder}\SpecialCharTok{::}\FunctionTok{inflateTriangle}\NormalTok{(}\AttributeTok{Triangle =}
+\NormalTok{     med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case, }\AttributeTok{rate =} \FloatTok{0.15}\NormalTok{)}
+\NormalTok{med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{adj\_avg\_case }\SpecialCharTok{*}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{open }\SpecialCharTok{+}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{paid}
+
+\CommentTok{\# Add row and column names}
+\NormalTok{med\_mal }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(}\AttributeTok{X =} \FunctionTok{names}\NormalTok{(med\_mal), }\AttributeTok{FUN =} \ControlFlowTok{function}\NormalTok{(data\_type)\{}
+\NormalTok{  this\_matrix }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal[[data\_type]]}
+  \FunctionTok{dimnames}\NormalTok{(this\_matrix) }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{(}\StringTok{\textquotesingle{}ay\textquotesingle{}} \OtherTok{=} \FunctionTok{paste0}\NormalTok{(}\StringTok{\textquotesingle{}ay\_\textquotesingle{}}\NormalTok{, }\DecValTok{1969}\SpecialCharTok{:}\DecValTok{1976}\NormalTok{),}
+     \StringTok{\textquotesingle{}age\textquotesingle{}} \OtherTok{=} \FunctionTok{paste0}\NormalTok{(}\StringTok{\textquotesingle{}age\_\textquotesingle{}}\NormalTok{, }\DecValTok{12} \SpecialCharTok{*} \DecValTok{1}\SpecialCharTok{:}\DecValTok{8}\NormalTok{))}
+  \FunctionTok{return}\NormalTok{(this\_matrix)}
+\NormalTok{\}, }\AttributeTok{simplify =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{USE.NAMES =} \ConstantTok{TRUE}\NormalTok{)}
+
+\NormalTok{med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept\_df }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept[, }\DecValTok{2}\SpecialCharTok{:}\DecValTok{8}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept[, }\DecValTok{1}\SpecialCharTok{:}\DecValTok{7}\NormalTok{]}
+
+\FunctionTok{colnames}\NormalTok{(med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept\_df) }\OtherTok{\textless{}{-}} \FunctionTok{paste0}\NormalTok{(}\StringTok{\textquotesingle{}age\_\textquotesingle{}}\NormalTok{, }\DecValTok{12} \SpecialCharTok{*} \DecValTok{1}\SpecialCharTok{:}\DecValTok{7}\NormalTok{, }\StringTok{\textquotesingle{}\_\textquotesingle{}}\NormalTok{, }\DecValTok{12} \SpecialCharTok{*} \DecValTok{2}\SpecialCharTok{:}\DecValTok{8}\NormalTok{)}
+ 
+\NormalTok{bs\_ult }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(rptd, paid, }\AttributeTok{row\_names =} \ConstantTok{NULL}\NormalTok{) \{}
+\NormalTok{  no\_cols }\OtherTok{\textless{}{-}} \FunctionTok{dim}\NormalTok{(rptd)[}\DecValTok{2}\NormalTok{]}
+\NormalTok{  df\_mat }\OtherTok{\textless{}{-}}\NormalTok{ rptd[, }\DecValTok{2}\SpecialCharTok{:}\NormalTok{no\_cols] }\SpecialCharTok{/}\NormalTok{ rptd[, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{(no\_cols }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{)]}
+\NormalTok{  ata }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(}\AttributeTok{X =}\NormalTok{ df\_mat, }\AttributeTok{MARGIN =} \DecValTok{2}\NormalTok{, }\AttributeTok{FUN =}\NormalTok{ mean, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+\NormalTok{  atu }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, ata }\SpecialCharTok{|\textgreater{}} \FunctionTok{rev}\NormalTok{() }\SpecialCharTok{|\textgreater{}} \FunctionTok{cumprod}\NormalTok{())}
+\NormalTok{  latest\_rptd }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(}\AttributeTok{X =} \DecValTok{1}\SpecialCharTok{:}\NormalTok{no\_cols, }\ControlFlowTok{function}\NormalTok{(x) rptd[x, no\_cols }\SpecialCharTok{+} \DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ x])}
+\NormalTok{  latest\_paid }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(}\AttributeTok{X =} \DecValTok{1}\SpecialCharTok{:}\NormalTok{no\_cols, }\ControlFlowTok{function}\NormalTok{(x) paid[x, no\_cols }\SpecialCharTok{+} \DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ x])}
+\NormalTok{  ultimate }\OtherTok{\textless{}{-}}\NormalTok{ latest\_rptd }\SpecialCharTok{*}\NormalTok{ atu}
+\NormalTok{  matrix\_out }\OtherTok{\textless{}{-}} \FunctionTok{matrix}\NormalTok{(}\AttributeTok{data =} \FunctionTok{c}\NormalTok{(latest\_rptd, atu, ultimate, latest\_paid),}
+    \AttributeTok{ncol =} \DecValTok{4}\NormalTok{, }\AttributeTok{byrow =} \ConstantTok{FALSE}\NormalTok{)}
+\NormalTok{  matrix\_out }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(matrix\_out, matrix\_out[,}\DecValTok{1}\NormalTok{] }\SpecialCharTok{*}\NormalTok{ matrix\_out[,}\DecValTok{2}\NormalTok{] }\SpecialCharTok{{-}}
+\NormalTok{      matrix\_out[,}\DecValTok{4}\NormalTok{])}
+  \FunctionTok{colnames}\NormalTok{(matrix\_out) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}rptd\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}atu\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}ult\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}paid\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}reserve\textquotesingle{}}\NormalTok{)}
+  \FunctionTok{rownames}\NormalTok{(matrix\_out) }\OtherTok{\textless{}{-}}\NormalTok{ row\_names}
+  \FunctionTok{return}\NormalTok{(matrix\_out)}
+\NormalTok{  \}}
+
+\FunctionTok{bs\_ult}\NormalTok{(}\AttributeTok{rptd =}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept, }\AttributeTok{paid =}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{paid,}
+  \AttributeTok{row\_names =} \FunctionTok{row.names}\NormalTok{(med\_mal}\SpecialCharTok{$}\NormalTok{rept))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+            rptd       atu       ult     paid   reserve
+ay_1969 23506000 1.0000000  23506000 15815000   7691000
+ay_1970 32216000 0.9787289  31530731 18983000  12547731
+ay_1971 48377000 0.9430549  45622165 17707000  27915165
+ay_1972 61163000 1.0045027  61438397 18518000  42920397
+ay_1973 73733000 0.9288155  68484352 11292000  57192352
+ay_1974 63477000 1.2448873  79021714  6267000  72754714
+ay_1975 48904000 1.9096082  93387478  1565000  91822478
+ay_1976 15791000 7.4582396 117773062   209000 117564062
+\end{verbatim}
 
 \section{Literature Review}\label{literature-review}
 
-The seminal work by Berquist and Sherman (1977) introduced deterministic
-methods to adjust loss development triangles for shifts in settlement
-rates and case reserve adequacy. While their methods remain industry
-standards, they lack a formal probabilistic framework for quantifying
-uncertainty.
+The seminal work by \bs introduced deterministic methods to adjust loss
+development triangles for shifts in settlement rates and case reserve
+adequacy. While their methods remain industry standards, they lack a
+formal probabilistic framework for quantifying uncertainty.
 
 \section{Methodology}\label{methodology}
+
+We first examine the effect of changes in case reserve adequacy. \bs use
+medical malpractice data to illustrate their procedure. The underlying
+assumption of the \bs method is that development factors are a function
+of (i) the change in paid loss, (ii) the change in the number of open
+claims, and (iii) the change in case reserve adequacy, where case
+reserve adequacy is measured by the ratio of average case reserves,
+adjusted for inflation. \bs measure case reserve adequacy separately by
+development lag. However, we believe that it's reasonable to assume that
+case reserve adequacy is a calendar-year measure that affects all
+accident years/lags. We can express the observed development factors as
+in terms of the current average case reserves:
+
+\hfill\break
+\begin{equation}\phantomsection\label{eq-ldf1}{
+d_{i, j \to j+1} = 1 + \frac{p_{i, j \to j+1}+\bar{c}_{n,j+1}\times f_{i+j} \times (1+r)^{i+1-n}\times o_{i,j+1}-\bar{c}_{n,j}\times f_{i+j-1}\times (1+r)^{i-n}\times o_{i,j}}{p_{i,j}+\bar{c}_{n,j} \times f_{i+j-1} \times (1+r)^{i-n} \times o_{i,j}}
+}\end{equation}
+
+where\\
+$i \in (1, n)$ is the accident year index\\
+$j \in (1, m)$ is the development lag\\
+$r$ is the inflation rate\\
+$\bar{c}_{i,j}$ is the average case reserve\\
+$o_{i,j}$ is the number of open claims\\
+$p_{i,j}$ is the number of paid loss\\
+$f_a$ is the calendar year case reserve adequecy factor as the end of year $a$\\
+
+In the \bs framework, the case reserve adequacy factors, \(f\), and the
+inflation (trend) rate, \(r\), are variables, whereas the other terms
+are fixed.
 
 We propose a Bayesian hierarchical model to formalize the adjustments.
 Let \(C_{i,j}\) denote the cumulative claims for accident year \(i\) and
@@ -292,6 +431,13 @@ magnitude of the operational change.
 Berquist, James R., and Richard E. Sherman. 1977. {``Loss Reserve
 Adequacy Testing: A Comprehensive, Systematic Approach.''}
 \emph{Proceedings of the Casualty Actuarial Society} 64: 123--59.
+
+\bibitem[\citeproctext]{ref-ChainLadder}
+Gesmann, Markus, Daniel Murphy, Yanwei (Wayne) Zhang, Alessandro
+Carrato, Mario Wuthrich, Fabio Concina, and Eric Dal Moro. 2024.
+\emph{ChainLadder: Statistical Methods and Models for Claims Reserving
+in General Insurance}.
+\url{https://CRAN.R-project.org/package=ChainLadder}.
 
 \end{CSLReferences}
 
