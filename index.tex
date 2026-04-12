@@ -226,7 +226,7 @@
 \IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
 \urlstyle{same}
 \hypersetup{
-  pdftitle={A Bayesian Approach to Address Changes in Claims Handling},
+  pdftitle={A Bayesian Approach to Address Changes in Claims Handling, Part 1},
   pdfauthor={Rajesh Sahasrabuddhe, FCAS, FCIA, MAAA},
   colorlinks=true,
   linkcolor={blue},
@@ -236,9 +236,10 @@
   pdfcreator={LaTeX via pandoc}}
 
 
-\title{A Bayesian Approach to Address Changes in Claims Handling}
+\title{A Bayesian Approach to Address Changes in Claims Handling, Part
+1}
 \author{Rajesh Sahasrabuddhe, FCAS, FCIA, MAAA}
-\date{2026-03-08}
+\date{2026-04-08}
 \begin{document}
 \maketitle
 \begin{abstract}
@@ -246,10 +247,10 @@ The seminal paper by James R. Berquist and Richard E. Sherman provided
 systematic methods for adjusting claim triangles to account for changes
 in claims handling. Those methods highlighted the dependency of future
 development on case reserve adequacy and claim settlement rates. The
-Berquist-Sherman method relies on restating claim triangles, rather than
-modeling the dependency. In this paper, we present a Bayesian approach
-to modeling the dependency in order to considering changes in claims
-handling when estimating unpaid claims.
+Berquist-Sherman method relies on restating claim triangles based on the
+data - not a model. In this paper, we present a Bayesian approach to
+modeling the changes in case reserve adequacy in order to restate the
+triangle.
 \end{abstract}
 
 \renewcommand*\contentsname{Table of contents}
@@ -269,16 +270,14 @@ It's tough to make predictions, especially about the future.
 \end{quote}
 
 In an actuarial analysis, we need to assess the predictive value of
-historical data in predicting the quantity of interest. In Loss Reserve
-Adequacy Testing: A Comprehensive, Systematic Approach (Berquist and
-Sherman 1977), James R. Berquist and Richard E. Sherman described
-various investigations that the actuary should undertake to understand
-(potential) changes in operations that might affect the predictive value
-of the data.
-
-Berquist and Sherman propose approaches to detect such changes and then
-adjust the data to address data distortions. They focus on two
-particular sources of changes in the historical data:
+historical data for use in modeling the quantity of interest. In ``Loss
+Reserve Adequacy Testing: A Comprehensive, Systematic Approach''
+(Berquist and Sherman 1977), James R. Berquist and Richard E. Sherman
+described various investigations that the actuary should undertake to
+understand (potential) changes in operations that might affect the
+predictive value of the data. Then, Berquist and Sherman propose
+approaches to adjust the data to address distortions. They focus on two
+particular changes in the historical data:
 
 \begin{itemize}
 \tightlist
@@ -289,28 +288,47 @@ particular sources of changes in the historical data:
 \end{itemize}
 
 In each case, they propose an approach to adjust the data to consider
-these changes in the estimation of unpaid claims.
+these changes in the estimation of unpaid claims. In this paper, we
+focus on the restatement due to changes in case reserve
+adequacy.\footnote{Part 2 of this paper will address changes in claims
+  settlement rate. I expect to issue Part 2 later in 2026. In addition,
+  we limit the scope to the restatement of the triangle, but do not
+  address the application of actuarial models to the restated triangle.}
 
-The goal of the approach we present in this paper is to include the
-dependency in the unpaid claim estimation model. Actuaries generally
-model dependency using a linear model. This is likely to be problematic
-with a claims triangle, as there are a limited number of data points
-relative to the number of parameters. This could result in overfitting
-or situations where the model does not properly isolate the effect of
-each of the independent variables.
+\bs do not include a statistical model (either frequentist or Bayesian)
+to infer changes in case reserve adequacy. Effectively, \bs assume that
+the data are 100\% signal and 0\% noise. The goal of this paper is to
+propose a statistical model to infer changes in case reserve adequacy.
 
-In the approach proposed in this paper, we fit a model for emergence
-using Bayesian techniques. We will use the interpretation of the
-coefficient to establish prior distributions for each coefficient and
-address the modeling concerns described above.
+Actuaries generally model relationships using a linear model. A
+frequentist approach to fitting that model (e.g., least squares) is
+likely to be problematic with a claims triangle, as there are a limited
+number of data points relative to the number of parameters. This could
+result in overfitting or in situations where the model does not properly
+isolate the effect of each independent variable.
 
-We present our proposed model using data from Berquist-Sherman to allow
-the reader to compare the proposed approach with the Berquist-Sherman
-baseline. The \texttt{R} code underlying this paper is available in a
-\href{https://github.com/rajesh06/resv_call_2026}{code repository}
-{[}Note to reviewers, I will move this to the CAS GitHub upon
-completion.{]} Conveniently, the \texttt{ChainLadder} (Gesmann et al.
-2024) package includes the data used in Berquist-Sherman.
+While we don't classify \bs as either frequentist or Bayesian
+statisticians, we note that the paper places a significant emphasis on
+understanding changes in company operations. Such an investigation would
+naturally result in priors for use in a Bayesian model. Those priors
+also allow for the isolation of variables. In the approach proposed in
+this paper, we fit a model for emergence using Bayesian Markov-chain
+Monte Carlo (MCMC) methods.
+
+We also hope that this paper serves as a gentle introduction to fitting
+Bayesian models via MCMC. The structure of the proposed model is
+therefore intentionally simple. We also include much of the \texttt{R}
+code in this paper. The complete \texttt{R} code underlying this paper
+is available in a \href{https://github.com/rajesh06/resv_call_2026}{code
+repository} on the CAS Github site. {[}Note to reviewers, I will move
+this to the CAS GitHub upon completion.{]}
+
+\section{Data}\label{data}
+
+We present our proposed model using data from \bs to enable the reader
+to compare it with the \bs baseline. Conveniently, the
+\texttt{ChainLadder} (Gesmann et al. 2024) package includes the data
+used in \bs.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -330,29 +348,14 @@ completion.{]} Conveniently, the \texttt{ChainLadder} (Gesmann et al.
   \FunctionTok{return}\NormalTok{(this\_matrix)}
 \NormalTok{\}, }\AttributeTok{simplify =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{USE.NAMES =} \ConstantTok{TRUE}\NormalTok{)}
 
+\NormalTok{avg\_case }\OtherTok{\textless{}{-}} \FunctionTok{extract\_anti\_diags}\NormalTok{(med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case)[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{8}\NormalTok{]}
+\FunctionTok{names}\NormalTok{(avg\_case) }\OtherTok{\textless{}{-}} \FunctionTok{paste0}\NormalTok{(}\StringTok{\textquotesingle{}ye\_\textquotesingle{}}\NormalTok{, }\DecValTok{1969}\SpecialCharTok{:}\DecValTok{1976}\NormalTok{)}
+
 \NormalTok{med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept\_df }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept[, }\DecValTok{2}\SpecialCharTok{:}\DecValTok{8}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept[, }\DecValTok{1}\SpecialCharTok{:}\DecValTok{7}\NormalTok{]}
 
 \FunctionTok{colnames}\NormalTok{(med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept\_df) }\OtherTok{\textless{}{-}} \FunctionTok{paste0}\NormalTok{(}\StringTok{\textquotesingle{}age\_\textquotesingle{}}\NormalTok{, }\DecValTok{12} \SpecialCharTok{*} \DecValTok{1}\SpecialCharTok{:}\DecValTok{7}\NormalTok{, }\StringTok{\textquotesingle{}\_\textquotesingle{}}\NormalTok{, }\DecValTok{12} \SpecialCharTok{*} \DecValTok{2}\SpecialCharTok{:}\DecValTok{8}\NormalTok{)}
  
-\NormalTok{bs\_ult }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(rptd, paid, }\AttributeTok{row\_names =} \ConstantTok{NULL}\NormalTok{) \{}
-\NormalTok{  no\_cols }\OtherTok{\textless{}{-}} \FunctionTok{dim}\NormalTok{(rptd)[}\DecValTok{2}\NormalTok{]}
-\NormalTok{  df\_mat }\OtherTok{\textless{}{-}}\NormalTok{ rptd[, }\DecValTok{2}\SpecialCharTok{:}\NormalTok{no\_cols] }\SpecialCharTok{/}\NormalTok{ rptd[, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{(no\_cols }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{)]}
-\NormalTok{  ata }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(}\AttributeTok{X =}\NormalTok{ df\_mat, }\AttributeTok{MARGIN =} \DecValTok{2}\NormalTok{, }\AttributeTok{FUN =}\NormalTok{ mean, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
-\NormalTok{  atu }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, ata }\SpecialCharTok{|\textgreater{}} \FunctionTok{rev}\NormalTok{() }\SpecialCharTok{|\textgreater{}} \FunctionTok{cumprod}\NormalTok{())}
-\NormalTok{  latest\_rptd }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(}\AttributeTok{X =} \DecValTok{1}\SpecialCharTok{:}\NormalTok{no\_cols, }\ControlFlowTok{function}\NormalTok{(x) rptd[x, no\_cols }\SpecialCharTok{+} \DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ x])}
-\NormalTok{  latest\_paid }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(}\AttributeTok{X =} \DecValTok{1}\SpecialCharTok{:}\NormalTok{no\_cols, }\ControlFlowTok{function}\NormalTok{(x) paid[x, no\_cols }\SpecialCharTok{+} \DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ x])}
-\NormalTok{  ultimate }\OtherTok{\textless{}{-}}\NormalTok{ latest\_rptd }\SpecialCharTok{*}\NormalTok{ atu}
-\NormalTok{  matrix\_out }\OtherTok{\textless{}{-}} \FunctionTok{matrix}\NormalTok{(}\AttributeTok{data =} \FunctionTok{c}\NormalTok{(latest\_rptd, atu, ultimate, latest\_paid),}
-    \AttributeTok{ncol =} \DecValTok{4}\NormalTok{, }\AttributeTok{byrow =} \ConstantTok{FALSE}\NormalTok{)}
-\NormalTok{  matrix\_out }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(matrix\_out, matrix\_out[,}\DecValTok{1}\NormalTok{] }\SpecialCharTok{*}\NormalTok{ matrix\_out[,}\DecValTok{2}\NormalTok{] }\SpecialCharTok{{-}}
-\NormalTok{      matrix\_out[,}\DecValTok{4}\NormalTok{])}
-  \FunctionTok{colnames}\NormalTok{(matrix\_out) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}rptd\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}atu\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}ult\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}paid\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}reserve\textquotesingle{}}\NormalTok{)}
-  \FunctionTok{rownames}\NormalTok{(matrix\_out) }\OtherTok{\textless{}{-}}\NormalTok{ row\_names}
-  \FunctionTok{return}\NormalTok{(matrix\_out)}
-\NormalTok{  \}}
-
-\FunctionTok{bs\_ult}\NormalTok{(}\AttributeTok{rptd =}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept, }\AttributeTok{paid =}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{paid,}
-  \AttributeTok{row\_names =} \FunctionTok{row.names}\NormalTok{(med\_mal}\SpecialCharTok{$}\NormalTok{rept))}
+\FunctionTok{bs\_ult}\NormalTok{(}\AttributeTok{rptd =}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{adj\_rept, }\AttributeTok{paid =}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{paid)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -368,65 +371,456 @@ ay_1975 48904000 1.9096082  93387478  1565000  91822478
 ay_1976 15791000 7.4582396 117773062   209000 117564062
 \end{verbatim}
 
-\section{Literature Review}\label{literature-review}
+\section{Overview of Methodology}\label{overview-of-methodology}
 
-The seminal work by \bs introduced deterministic methods to adjust loss
-development triangles for shifts in settlement rates and case reserve
-adequacy. While their methods remain industry standards, they lack a
-formal probabilistic framework for quantifying uncertainty.
+\bs use medical malpractice data to illustrate their procedure. The
+underlying assumption of the \bs method is that adjusted development
+factors are a function of (i) the change in paid loss, (ii) the change
+in the number of open claims, and (iii) the change in adjusted case
+reserves.
 
-\section{Methodology}\label{methodology}
+\bs calculate adjusted average case reserves using only the inflation
+rate and the current case reserves. We express the relationship as
+follows:
 
-We first examine the effect of changes in case reserve adequacy. \bs use
-medical malpractice data to illustrate their procedure. The underlying
-assumption of the \bs method is that development factors are a function
-of (i) the change in paid loss, (ii) the change in the number of open
-claims, and (iii) the change in case reserve adequacy, where case
-reserve adequacy is measured by the ratio of average case reserves,
-adjusted for inflation. \bs measure case reserve adequacy separately by
+\[
+\bar{c}^{'}_{i,j} = {\bar{c}_{n,j}} \times (1+r)^{i-n}
+\]
+
+where,
+
+\[
+\begin{aligned}
+  \bar{c}_{i,j} &= \text{average case reserve for accident year } i \text{ at development age } j\\
+i &\in [1, n]\\
+f_t &= \text{case reserve adequacy factor for calendar year }t\\
+r &= \text{annual inflation rate}\\
+\end{aligned}
+\]
+
+Effectively, \bs do not measure case reserve adequacy using the data.
+The adjusted case reserves are independent of historical observed case
+reserves; they are only a function of current case reserves and the
+inflation rate. \bs also measure case reserve adequacy separately by
 development lag. However, we believe that it's reasonable to assume that
 case reserve adequacy is a calendar-year measure that affects all
-accident years/lags. We can express the observed development factors as
-in terms of the current average case reserves:
+accident years/lags. Similarly, \bs present inflation as an accident
+year measure. However, because they apply the same inflation rate to all
+accident years, the \bs treatment is equivalent to a view of inflation
+as a calendar-year effect, which we believe is more intuitive.
 
-\hfill\break
-\begin{equation}\phantomsection\label{eq-ldf1}{
-d_{i, j \to j+1} = 1 + \frac{p_{i, j \to j+1}+\bar{c}_{n,j+1}\times f_{i+j} \times (1+r)^{i+1-n}\times o_{i,j+1}-\bar{c}_{n,j}\times f_{i+j-1}\times (1+r)^{i-n}\times o_{i,j}}{p_{i,j}+\bar{c}_{n,j} \times f_{i+j-1} \times (1+r)^{i-n} \times o_{i,j}}
+\begin{equation}\phantomsection\label{eq-raf}{
+\begin{aligned}
+  \bar{c}_{i,j} &= {\bar{c}_{n,j}} \times (1+r)^{-(n-i-j+1)} \times f_{i+j-1}\\
+  \frac{\bar{c}_{i,j}}{\bar{c}_{n,j}} &= (1+r)^{-(n-i-j+1)} \times f_{i+j-1}\\
+  f_{i+j-1} &= \frac{\bar{c}_{i,j}}{\bar{c}_{n,j}} \times (1+r)^{(n-i-j+1)}\\
+\end{aligned}
 }\end{equation}
 
-where\\
-$i \in (1, n)$ is the accident year index\\
-$j \in (1, m)$ is the development lag\\
-$r$ is the inflation rate\\
-$\bar{c}_{i,j}$ is the average case reserve\\
-$o_{i,j}$ is the number of open claims\\
-$p_{i,j}$ is the number of paid loss\\
-$f_a$ is the calendar year case reserve adequecy factor as the end of year $a$\\
+In the Bayesian framework proposed in this paper, we use the average
+case reserves, \(bar{c}\) and \(r\), to estimate \(f\). Unlike \bs, we
+treat \(r\) as a free parameter derived from the case reserve data.
+\bs provide the following discussion on the derivation of \(r\).
 
-In the \bs framework, the case reserve adequacy factors, \(f\), and the
-inflation (trend) rate, \(r\), are variables, whereas the other terms
-are fixed.
+\begin{quote}
+The severity trends obtained from the fitting of exponential curves to
+the case reserves per open claim from Exhibit B range from + 27.6\% to
+34.2\%. with the exception of such averages at 12 months of development.
+In contrast, the severity trends derived from the array of paid losses
+per closed claim in Exhibit C range from + 6.7\% to 14.3\%. Furthermore,
+the traditional approach of estimating the severity trend from the
+fitting of an exponential curve to calendar year paid losses per closed
+claim produces a trend of + 15.0\% (with a coefficient of determination
+of .9793).
 
-We propose a Bayesian hierarchical model to formalize the adjustments.
-Let \(C_{i,j}\) denote the cumulative claims for accident year \(i\) and
-development period \(j\). We assume:
+In the above example. no evidence was found which supported the notion
+that the severity trend for paid losses was inaccurate, and the
+indicated severity trend of +15.0\% was close to that experienced by
+many malpractice carriers. Thus, severity trends on the order of +30\%
+derived from changes in cast reserves per open claim were rejected as
+unreasonable and the + 15\% severity trend was selected as being
+representative of the underlying trend.
+\end{quote}
 
-\[C_{i,j} \sim \text{Log-Normal}(\mu_{i,j}, \sigma^2)\]
+As a reminder, we employ a calendar year trend assumption, and through
+the use of Bayesian fitting we can use priors to control for
+unreasonable results.
 
-Where the parameter \(\mu_{i,j}\) is conditioned on a ``settlement
-speed'' factor, allowing the model to transition smoothly between
-different claims-handling regimes.
+\section{The Bayesian Model}\label{the-bayesian-model}
 
-\section{Discussion}\label{discussion}
+We can now turn to fitting the Bayesian model. We first need to identify
+likelihood functions for the observed data and priors for each variable
+that we need to estimate.
 
-Unlike the original Berquist-Sherman approach, the Bayesian method
-allows for the inclusion of prior expert judgment regarding the
-magnitude of the operational change.
+\begin{itemize}
+\item
+  The ratio of case reserves has a domain of non-negative values. We
+  assume that these ratios are Gamma distributed.
+\item
+  The inflation rate variable has a domain of real numbers, though we
+  recognize that negative inflation rates are not common. The prior
+  distribution is likely centered a few percentage points
+  above\footnote{Actuaries generally expect inflation related to claims
+    to exceed general economic inflation.} the underlying rate of
+  economic inflation.\footnote{\bs is a 1977 paper. We assume that the
+    research and writing occurred in the mid-1970s. The underlying
+    inflation rate in that period was both high and volatile.} We select
+  a Normal distribution with mean of 15\%, and standard deviation of
+  10\%. We define the inflation factor as \(1\) plus the factor to
+  inflate the historical case reserves to current cost levels.
+\end{itemize}
 
-\section{References}\label{references}
+We therefore assume that the product of the inflation adjustment and
+observed case reserve ratios are Gamma distributed. That Gamma
+distribution represents reserve adequacy factor.
+
+To provide a more intuitive understanding, we first present the fitting
+of the Bayesian model to the observed ratio of average case reserves at
+year-end 1975 and average case reserves at year-end 1976. (Year-end 1976
+is the current valuation of the data in \bs.) We present the Stan script
+for this model below.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{// The input data is a vector \textquotesingle{}case ratios\textquotesingle{} of length \textquotesingle{}N\textquotesingle{}, and the }
+\CommentTok{// projection length}
+\KeywordTok{data}\NormalTok{ \{}
+  \DataTypeTok{int}\NormalTok{\textless{}}\KeywordTok{lower}\NormalTok{=}\DecValTok{0}\NormalTok{\textgreater{} N;}
+  \DataTypeTok{vector}\NormalTok{[N] case\_ratios;}
+  \DataTypeTok{int}\NormalTok{ proj\_length;}
+\NormalTok{\}}
+
+\CommentTok{// The parameters accepted by the model. Our model}
+\CommentTok{// accepts two parameters \textquotesingle{}alpha\textquotesingle{} and \textquotesingle{}beta\textquotesingle{} {-} and the trend parameter.}
+\KeywordTok{parameters}\NormalTok{ \{}
+  \DataTypeTok{real}\NormalTok{ trend;}
+  \DataTypeTok{real}\NormalTok{\textless{}}\KeywordTok{lower}\NormalTok{=}\DecValTok{0}\NormalTok{\textgreater{} alpha;}
+  \DataTypeTok{real}\NormalTok{\textless{}}\KeywordTok{lower}\NormalTok{=}\DecValTok{0}\NormalTok{\textgreater{} beta;}
+\NormalTok{\}}
+
+\CommentTok{// The model to be estimated. We model the product of case ratios}
+\CommentTok{// and trend factor to be Gamma distributed with shape \textquotesingle{}alpha\textquotesingle{}}
+\CommentTok{// and rate \textquotesingle{}beta\textquotesingle{}.}
+\KeywordTok{model}\NormalTok{ \{}
+  \CommentTok{// Priors}
+\NormalTok{  trend \textasciitilde{} normal(}\FloatTok{0.15}\NormalTok{, }\FloatTok{0.05}\NormalTok{);}
+  
+  \CommentTok{// Likelihood}
+\NormalTok{  case\_ratios *  ((}\DecValTok{1}\NormalTok{ + trend) \^{} proj\_length)  \textasciitilde{} gamma(alpha, beta);}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{stan\_out }\OtherTok{\textless{}{-}}\NormalTok{ rstan}\SpecialCharTok{::}\FunctionTok{stan}\NormalTok{(}\AttributeTok{file =} 
+    \StringTok{\textquotesingle{}C:/Users/rajes/OneDrive/Actuarial Research/resv\_call\_2026/src/case\_adj.stan\textquotesingle{}}\NormalTok{, }
+  \AttributeTok{model\_name =} \StringTok{\textquotesingle{}berquist sherman case adj\textquotesingle{}}\NormalTok{, }\AttributeTok{seed =} \DecValTok{14159}\NormalTok{, }\AttributeTok{data =} \FunctionTok{list}\NormalTok{(}
+    \StringTok{\textquotesingle{}proj\_length\textquotesingle{}} \OtherTok{=} \DecValTok{1}\NormalTok{,}
+    \StringTok{\textquotesingle{}case\_ratios\textquotesingle{}} \OtherTok{=}\NormalTok{ avg\_case}\SpecialCharTok{$}\NormalTok{ye\_1975 }\SpecialCharTok{/}\NormalTok{ avg\_case}\SpecialCharTok{$}\NormalTok{ye\_1976[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{7}\NormalTok{], }\StringTok{\textquotesingle{}N\textquotesingle{}} \OtherTok{=} \DecValTok{7}\NormalTok{), }
+  \AttributeTok{par =} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}trend\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}alpha\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}beta\textquotesingle{}}\NormalTok{), }\AttributeTok{chains =} \DecValTok{3}\NormalTok{, }\AttributeTok{iter =} \FloatTok{4e3}\NormalTok{, }\AttributeTok{warmup =} \FloatTok{1e3}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Running "C:/PROGRA~1/R/R-4.4.2/bin/x64/Rcmd.exe" SHLIB foo.c
+using C compiler: 'gcc.exe (GCC) 13.3.0'
+gcc  -I"C:/PROGRA~1/R/R-4.4.2/include" -DNDEBUG   -I"C:/Users/rajes/AppData/Local/R/win-library/4.4/Rcpp/include/"  -I"C:/Users/rajes/AppData/Local/R/win-library/4.4/RcppEigen/include/"  -I"C:/Users/rajes/AppData/Local/R/win-library/4.4/RcppEigen/include/unsupported"  -I"C:/Users/rajes/AppData/Local/R/win-library/4.4/BH/include" -I"C:/Users/rajes/AppData/Local/R/win-library/4.4/StanHeaders/include/src/"  -I"C:/Users/rajes/AppData/Local/R/win-library/4.4/StanHeaders/include/"  -I"C:/Users/rajes/AppData/Local/R/win-library/4.4/RcppParallel/include/" -DRCPP_PARALLEL_USE_TBB=1 -I"C:/Users/rajes/AppData/Local/R/win-library/4.4/rstan/include" -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DUSE_STANC3 -DSTRICT_R_HEADERS  -DBOOST_PHOENIX_NO_VARIADIC_EXPRESSION  -D_HAS_AUTO_PTR_ETC=0  -include "C:/Users/rajes/AppData/Local/R/win-library/4.4/StanHeaders/include/stan/math/prim/fun/Eigen.hpp"  -std=c++1y    -I"C:/rtools44/x86_64-w64-mingw32.static.posix/include"     -O2 -Wall  -mfpmath=sse -msse2 -mstackrealign  -c foo.c -o foo.o
+cc1.exe: warning: command-line option '-std=c++14' is valid for C++/ObjC++ but not for C
+In file included from C:/Users/rajes/AppData/Local/R/win-library/4.4/RcppEigen/include/Eigen/Core:19,
+                 from C:/Users/rajes/AppData/Local/R/win-library/4.4/RcppEigen/include/Eigen/Dense:1,
+                 from C:/Users/rajes/AppData/Local/R/win-library/4.4/StanHeaders/include/stan/math/prim/fun/Eigen.hpp:22,
+                 from <command-line>:
+C:/Users/rajes/AppData/Local/R/win-library/4.4/RcppEigen/include/Eigen/src/Core/util/Macros.h:679:10: fatal error: cmath: No such file or directory
+  679 | #include <cmath>
+      |          ^~~~~~~
+compilation terminated.
+make: *** [C:/PROGRA~1/R/R-4.4.2/etc/x64/Makeconf:289: foo.o] Error 1
+\end{verbatim}
+
+\begin{verbatim}
+
+SAMPLING FOR MODEL 'berquist sherman case adj' NOW (CHAIN 1).
+Chain 1: 
+Chain 1: Gradient evaluation took 4.6e-05 seconds
+Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.46 seconds.
+Chain 1: Adjust your expectations accordingly!
+Chain 1: 
+Chain 1: 
+Chain 1: Iteration:    1 / 4000 [  0%]  (Warmup)
+Chain 1: Iteration:  400 / 4000 [ 10%]  (Warmup)
+Chain 1: Iteration:  800 / 4000 [ 20%]  (Warmup)
+Chain 1: Iteration: 1001 / 4000 [ 25%]  (Sampling)
+Chain 1: Iteration: 1400 / 4000 [ 35%]  (Sampling)
+Chain 1: Iteration: 1800 / 4000 [ 45%]  (Sampling)
+Chain 1: Iteration: 2200 / 4000 [ 55%]  (Sampling)
+Chain 1: Iteration: 2600 / 4000 [ 65%]  (Sampling)
+Chain 1: Iteration: 3000 / 4000 [ 75%]  (Sampling)
+Chain 1: Iteration: 3400 / 4000 [ 85%]  (Sampling)
+Chain 1: Iteration: 3800 / 4000 [ 95%]  (Sampling)
+Chain 1: Iteration: 4000 / 4000 [100%]  (Sampling)
+Chain 1: 
+Chain 1:  Elapsed Time: 0.165 seconds (Warm-up)
+Chain 1:                0.517 seconds (Sampling)
+Chain 1:                0.682 seconds (Total)
+Chain 1: 
+
+SAMPLING FOR MODEL 'berquist sherman case adj' NOW (CHAIN 2).
+Chain 2: Rejecting initial value:
+Chain 2:   Error evaluating the log probability at the initial value.
+Chain 2: Exception: gamma_lpdf: Random variable[1] is -0.445294, but must be positive finite! (in 'string', line 23, column 2 to column 67)
+Chain 2: 
+Chain 2: Gradient evaluation took 4e-06 seconds
+Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.04 seconds.
+Chain 2: Adjust your expectations accordingly!
+Chain 2: 
+Chain 2: 
+Chain 2: Iteration:    1 / 4000 [  0%]  (Warmup)
+Chain 2: Iteration:  400 / 4000 [ 10%]  (Warmup)
+Chain 2: Iteration:  800 / 4000 [ 20%]  (Warmup)
+Chain 2: Iteration: 1001 / 4000 [ 25%]  (Sampling)
+Chain 2: Iteration: 1400 / 4000 [ 35%]  (Sampling)
+Chain 2: Iteration: 1800 / 4000 [ 45%]  (Sampling)
+Chain 2: Iteration: 2200 / 4000 [ 55%]  (Sampling)
+Chain 2: Iteration: 2600 / 4000 [ 65%]  (Sampling)
+Chain 2: Iteration: 3000 / 4000 [ 75%]  (Sampling)
+Chain 2: Iteration: 3400 / 4000 [ 85%]  (Sampling)
+Chain 2: Iteration: 3800 / 4000 [ 95%]  (Sampling)
+Chain 2: Iteration: 4000 / 4000 [100%]  (Sampling)
+Chain 2: 
+Chain 2:  Elapsed Time: 0.177 seconds (Warm-up)
+Chain 2:                0.517 seconds (Sampling)
+Chain 2:                0.694 seconds (Total)
+Chain 2: 
+
+SAMPLING FOR MODEL 'berquist sherman case adj' NOW (CHAIN 3).
+Chain 3: Rejecting initial value:
+Chain 3:   Error evaluating the log probability at the initial value.
+Chain 3: Exception: gamma_lpdf: Random variable[1] is -0.0452853, but must be positive finite! (in 'string', line 23, column 2 to column 67)
+Chain 3: Rejecting initial value:
+Chain 3:   Error evaluating the log probability at the initial value.
+Chain 3: Exception: gamma_lpdf: Random variable[1] is -0.494595, but must be positive finite! (in 'string', line 23, column 2 to column 67)
+Chain 3: 
+Chain 3: Gradient evaluation took 5e-06 seconds
+Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.05 seconds.
+Chain 3: Adjust your expectations accordingly!
+Chain 3: 
+Chain 3: 
+Chain 3: Iteration:    1 / 4000 [  0%]  (Warmup)
+Chain 3: Iteration:  400 / 4000 [ 10%]  (Warmup)
+Chain 3: Iteration:  800 / 4000 [ 20%]  (Warmup)
+Chain 3: Iteration: 1001 / 4000 [ 25%]  (Sampling)
+Chain 3: Iteration: 1400 / 4000 [ 35%]  (Sampling)
+Chain 3: Iteration: 1800 / 4000 [ 45%]  (Sampling)
+Chain 3: Iteration: 2200 / 4000 [ 55%]  (Sampling)
+Chain 3: Iteration: 2600 / 4000 [ 65%]  (Sampling)
+Chain 3: Iteration: 3000 / 4000 [ 75%]  (Sampling)
+Chain 3: Iteration: 3400 / 4000 [ 85%]  (Sampling)
+Chain 3: Iteration: 3800 / 4000 [ 95%]  (Sampling)
+Chain 3: Iteration: 4000 / 4000 [100%]  (Sampling)
+Chain 3: 
+Chain 3:  Elapsed Time: 0.167 seconds (Warm-up)
+Chain 3:                0.528 seconds (Sampling)
+Chain 3:                0.695 seconds (Total)
+Chain 3: 
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{adj\_76\_75 }\OtherTok{\textless{}{-}}\NormalTok{ tibble}\SpecialCharTok{::}\FunctionTok{tibble}\NormalTok{(}\AttributeTok{trend =}\NormalTok{ rstan}\SpecialCharTok{::}\FunctionTok{extract}\NormalTok{(}\AttributeTok{object =}\NormalTok{ stan\_out)}\SpecialCharTok{$}\NormalTok{trend,}
+  \AttributeTok{alpha =}\NormalTok{ rstan}\SpecialCharTok{::}\FunctionTok{extract}\NormalTok{(}\AttributeTok{object =}\NormalTok{ stan\_out)}\SpecialCharTok{$}\NormalTok{alpha,}
+  \AttributeTok{beta =}\NormalTok{ rstan}\SpecialCharTok{::}\FunctionTok{extract}\NormalTok{(}\AttributeTok{object =}\NormalTok{ stan\_out)}\SpecialCharTok{$}\NormalTok{beta)}
+
+\NormalTok{rstan}\SpecialCharTok{::}\FunctionTok{extract}\NormalTok{(}\AttributeTok{object =}\NormalTok{ stan\_out)}\SpecialCharTok{$}\NormalTok{trend }\SpecialCharTok{|\textgreater{}} \FunctionTok{mean}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+[1] 0.1323483
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{(rstan}\SpecialCharTok{::}\FunctionTok{extract}\NormalTok{(}\AttributeTok{object =}\NormalTok{ stan\_out)}\SpecialCharTok{$}\NormalTok{alpha }\SpecialCharTok{/}\NormalTok{ rstan}\SpecialCharTok{::}\FunctionTok{extract}\NormalTok{(}\AttributeTok{object =}\NormalTok{ stan\_out)}\SpecialCharTok{$}\NormalTok{beta) }\SpecialCharTok{|\textgreater{}} \FunctionTok{mean}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+[1] 0.8981032
+\end{verbatim}
+
+Below, we present a comparison of the observed and modeled case reserve
+ratios.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot\_bs}\NormalTok{(}\AttributeTok{case\_ratios =}\NormalTok{ avg\_case}\SpecialCharTok{$}\NormalTok{ye\_1975 }\SpecialCharTok{/}\NormalTok{ avg\_case}\SpecialCharTok{$}\NormalTok{ye\_1976[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{7}\NormalTok{], }
+  \AttributeTok{stan\_object =}\NormalTok{ stan\_out, }\AttributeTok{x\_lim =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.60}\NormalTok{, }\DecValTok{1}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{index_files/figure-pdf/unnamed-chunk-4-1.pdf}}
+
+We can then repeat this process for the prior diagonals. The syntax is
+similar to that in the code block above, with the resulting
+\texttt{adj\_76\_X} object being a data frame of the the the fitted
+trend rate, and \alpha (shape) and \beta (rate) parameters of the Gamma
+distribution. We do not fit a model for the 1970 and 1969 diagonals,
+which only have 2 and 1 observations respectively.
+
+\section{Adjusted Triangle}\label{adjusted-triangle}
+
+We can now use the fitted Bayesian models to adjust the data in the
+triangles. We have two options to adjust the data:
+
+\begin{itemize}
+\item
+  We could adjust the observed case reserves by applying the fitted
+  reserve adequacy factor.
+\item
+  We could restate prior diagonals by detrending current case reserves
+  using the fitted trend factor.
+\end{itemize}
+
+We prefer the first option as it better incorporates historical
+variability. Since we fit a Bayesian model, we have a posterior
+distribution for the trend rate and a posterior predictive distribution
+for the reserve adequacy factor. We present the code for the first
+option below.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{adj\_rptd }\OtherTok{\textless{}{-}} \FunctionTok{lapply}\NormalTok{(}\AttributeTok{X =} \DecValTok{1}\SpecialCharTok{:}\DecValTok{9000}\NormalTok{, }\AttributeTok{FUN =} \ControlFlowTok{function}\NormalTok{(x)\{}
+\NormalTok{  adj\_case }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case}
+\NormalTok{  adj\_case[}\DecValTok{7}\NormalTok{, }\DecValTok{1}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{7}\NormalTok{, }\DecValTok{1}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_75}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_75}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{6}\NormalTok{, }\DecValTok{2}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{6}\NormalTok{, }\DecValTok{2}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_75}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_75}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{5}\NormalTok{, }\DecValTok{3}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{5}\NormalTok{, }\DecValTok{3}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_75}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_75}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{4}\NormalTok{, }\DecValTok{4}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{4}\NormalTok{, }\DecValTok{4}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_75}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_75}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{3}\NormalTok{, }\DecValTok{5}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{3}\NormalTok{, }\DecValTok{5}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_75}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_75}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{2}\NormalTok{, }\DecValTok{6}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{2}\NormalTok{, }\DecValTok{6}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_75}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_75}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{7}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{7}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_75}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_75}\SpecialCharTok{$}\NormalTok{beta[x])}
+  
+\NormalTok{  adj\_case[}\DecValTok{6}\NormalTok{, }\DecValTok{1}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{6}\NormalTok{, }\DecValTok{1}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_74}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_74}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{5}\NormalTok{, }\DecValTok{2}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{5}\NormalTok{, }\DecValTok{2}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_74}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_74}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{4}\NormalTok{, }\DecValTok{3}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{4}\NormalTok{, }\DecValTok{3}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_74}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_74}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{3}\NormalTok{, }\DecValTok{4}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{3}\NormalTok{, }\DecValTok{4}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_74}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_74}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{2}\NormalTok{, }\DecValTok{5}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{2}\NormalTok{, }\DecValTok{5}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_74}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_74}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{6}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{6}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_74}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_74}\SpecialCharTok{$}\NormalTok{beta[x])}
+  
+\NormalTok{  adj\_case[}\DecValTok{5}\NormalTok{, }\DecValTok{1}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{5}\NormalTok{, }\DecValTok{1}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_73}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_73}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{4}\NormalTok{, }\DecValTok{2}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{4}\NormalTok{, }\DecValTok{2}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_73}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_73}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{3}\NormalTok{, }\DecValTok{3}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{3}\NormalTok{, }\DecValTok{3}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_73}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_73}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{2}\NormalTok{, }\DecValTok{4}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{2}\NormalTok{, }\DecValTok{4}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_73}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_73}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{5}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{5}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_73}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_73}\SpecialCharTok{$}\NormalTok{beta[x])}
+  
+\NormalTok{  adj\_case[}\DecValTok{4}\NormalTok{, }\DecValTok{1}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{4}\NormalTok{, }\DecValTok{1}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_72}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_72}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{3}\NormalTok{, }\DecValTok{2}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{3}\NormalTok{, }\DecValTok{2}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_72}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_72}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{2}\NormalTok{, }\DecValTok{3}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{2}\NormalTok{, }\DecValTok{3}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_72}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_72}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{4}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{4}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_72}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_72}\SpecialCharTok{$}\NormalTok{beta[x])}
+  
+\NormalTok{  adj\_case[}\DecValTok{3}\NormalTok{, }\DecValTok{1}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{3}\NormalTok{, }\DecValTok{1}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_71}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_71}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{2}\NormalTok{, }\DecValTok{2}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{2}\NormalTok{, }\DecValTok{2}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_71}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_71}\SpecialCharTok{$}\NormalTok{beta[x])}
+\NormalTok{  adj\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{3}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{3}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ (adj\_76\_71}\SpecialCharTok{$}\NormalTok{alpha[x] }\SpecialCharTok{/} 
+\NormalTok{      adj\_76\_71}\SpecialCharTok{$}\NormalTok{beta[x])}
+  
+\NormalTok{  adj\_case[}\DecValTok{2}\NormalTok{, }\DecValTok{1}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{8}\NormalTok{, }\DecValTok{1}\NormalTok{] }\SpecialCharTok{/} \FloatTok{1.15} \SpecialCharTok{\^{}} \DecValTok{6}
+\NormalTok{  adj\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{2}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{7}\NormalTok{, }\DecValTok{2}\NormalTok{] }\SpecialCharTok{/} \FloatTok{1.15} \SpecialCharTok{\^{}} \DecValTok{6}
+\NormalTok{  adj\_case[}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{avg\_case[}\DecValTok{8}\NormalTok{, }\DecValTok{1}\NormalTok{] }\SpecialCharTok{/} \FloatTok{1.15} \SpecialCharTok{\^{}} \DecValTok{7}
+  
+\NormalTok{  adj\_reported }\OtherTok{\textless{}{-}}\NormalTok{ adj\_case }\SpecialCharTok{*}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{open }\SpecialCharTok{+}\NormalTok{ med\_mal}\SpecialCharTok{$}\NormalTok{paid}
+  
+  \FunctionTok{return}\NormalTok{(adj\_reported)}
+\NormalTok{\})}
+\end{Highlighting}
+\end{Shaded}
+
+\section{\texorpdfstring{Comparison to \bs Development
+Factors}{Comparison to Development Factors}}\label{comparison-to-development-factors}
+
+We can now compare our modeled development factors to those from \bs,
+which we indicate with the red circles.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ldfs }\OtherTok{\textless{}{-}} \FunctionTok{lapply}\NormalTok{(}\AttributeTok{X =} \DecValTok{1}\SpecialCharTok{:}\DecValTok{5}\NormalTok{, }\AttributeTok{FUN =} \ControlFlowTok{function}\NormalTok{(dev\_int)\{}
+\NormalTok{  ldf }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(}\AttributeTok{X =}\NormalTok{ adj\_rptd , }\AttributeTok{FUN =} \ControlFlowTok{function}\NormalTok{(x)\{}
+\NormalTok{    x[}\DecValTok{1}\SpecialCharTok{:}\NormalTok{(}\DecValTok{8} \SpecialCharTok{{-}}\NormalTok{ dev\_int), dev\_int }\SpecialCharTok{+} \DecValTok{1}\NormalTok{] }\SpecialCharTok{/}\NormalTok{ x[}\DecValTok{1}\SpecialCharTok{:}\NormalTok{(}\DecValTok{8} \SpecialCharTok{{-}}\NormalTok{ dev\_int), dev\_int]}
+\NormalTok{  \}) }\SpecialCharTok{|\textgreater{}} \FunctionTok{as.numeric}\NormalTok{()}
+\NormalTok{  ldf\_df }\OtherTok{\textless{}{-}}\NormalTok{ tibble}\SpecialCharTok{::}\FunctionTok{tibble}\NormalTok{(}\AttributeTok{dev\_int =}\NormalTok{ dev\_int, }\AttributeTok{ldf =}\NormalTok{ ldf)}
+\NormalTok{\}) }\SpecialCharTok{|\textgreater{}}\NormalTok{ dplyr}\SpecialCharTok{::}\FunctionTok{bind\_rows}\NormalTok{()}
+
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mfcol =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{5}\NormalTok{))}
+\FunctionTok{boxplot}\NormalTok{(}\AttributeTok{formula =}\NormalTok{ ldf }\SpecialCharTok{\textasciitilde{}}\NormalTok{ dev\_int, }\AttributeTok{data =}\NormalTok{ ldfs, }\AttributeTok{subset =}\NormalTok{ dev\_int }\SpecialCharTok{==} \DecValTok{1}\NormalTok{, }\AttributeTok{main =} \StringTok{\textquotesingle{}1:2\textquotesingle{}}\NormalTok{)}
+\FunctionTok{points}\NormalTok{(}\AttributeTok{x =} \DecValTok{1}\NormalTok{, }\AttributeTok{y =} \FloatTok{3.901825334}\NormalTok{, }\AttributeTok{col =} \StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{, }\AttributeTok{cex =} \FloatTok{1.5}\NormalTok{)}
+\FunctionTok{boxplot}\NormalTok{(}\AttributeTok{formula =}\NormalTok{ ldf }\SpecialCharTok{\textasciitilde{}}\NormalTok{ dev\_int, }\AttributeTok{data =}\NormalTok{ ldfs, }\AttributeTok{subset =}\NormalTok{ dev\_int }\SpecialCharTok{==} \DecValTok{2}\NormalTok{, }\AttributeTok{main =} \StringTok{\textquotesingle{}2:3\textquotesingle{}}\NormalTok{)}
+\FunctionTok{points}\NormalTok{(}\AttributeTok{x =} \DecValTok{1}\NormalTok{, }\AttributeTok{y =} \FloatTok{1.526912442}\NormalTok{, }\AttributeTok{col =} \StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{, }\AttributeTok{cex =} \FloatTok{1.5}\NormalTok{)}
+\FunctionTok{boxplot}\NormalTok{(}\AttributeTok{formula =}\NormalTok{ ldf }\SpecialCharTok{\textasciitilde{}}\NormalTok{ dev\_int, }\AttributeTok{data =}\NormalTok{ ldfs, }\AttributeTok{subset =}\NormalTok{ dev\_int }\SpecialCharTok{==} \DecValTok{3}\NormalTok{, }\AttributeTok{main =} \StringTok{\textquotesingle{}3:4\textquotesingle{}}\NormalTok{)}
+\FunctionTok{points}\NormalTok{(}\AttributeTok{x =} \DecValTok{1}\NormalTok{, }\AttributeTok{y =} \FloatTok{1.334693047}\NormalTok{, }\AttributeTok{col =} \StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{, }\AttributeTok{cex =} \FloatTok{1.5}\NormalTok{)}
+\FunctionTok{boxplot}\NormalTok{(}\AttributeTok{formula =}\NormalTok{ ldf }\SpecialCharTok{\textasciitilde{}}\NormalTok{ dev\_int, }\AttributeTok{data =}\NormalTok{ ldfs, }\AttributeTok{subset =}\NormalTok{ dev\_int }\SpecialCharTok{==} \DecValTok{4}\NormalTok{, }\AttributeTok{main =} \StringTok{\textquotesingle{}4:5\textquotesingle{}}\NormalTok{)}
+\FunctionTok{points}\NormalTok{(}\AttributeTok{x =} \DecValTok{1}\NormalTok{, }\AttributeTok{y =} \FloatTok{0.928818739}\NormalTok{, }\AttributeTok{col =} \StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{, }\AttributeTok{cex =} \FloatTok{1.5}\NormalTok{)}
+\FunctionTok{boxplot}\NormalTok{(}\AttributeTok{formula =}\NormalTok{ ldf }\SpecialCharTok{\textasciitilde{}}\NormalTok{ dev\_int, }\AttributeTok{data =}\NormalTok{ ldfs, }\AttributeTok{subset =}\NormalTok{ dev\_int }\SpecialCharTok{==} \DecValTok{5}\NormalTok{, }\AttributeTok{main =} \StringTok{\textquotesingle{}5:6\textquotesingle{}}\NormalTok{)}
+\FunctionTok{points}\NormalTok{(}\AttributeTok{x =} \DecValTok{1}\NormalTok{, }\AttributeTok{y =} \FloatTok{1.062621943}\NormalTok{, , }\AttributeTok{col =} \StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{, }\AttributeTok{cex =} \FloatTok{1.5}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{index_files/figure-pdf/unnamed-chunk-10-1.pdf}}
+
+\section{Conclusions}\label{conclusions}
+
+We believe that actuaries are generally hesitant to apply
+\bs adjustments as they view the underlying assumption of 100\% data
+credibility as unreasonable, particularly for small sample sizes. In
+this paper, we presented a model for the \bs case reserve adequacy
+adjustments. The model infers these changes from the data, rather than
+assuming 100\% data credibility. This approach not only provides a
+modeled basis for \bs adjustments, but also results in a distribution of
+development factors that can be used to develop a distribution of
+reserves. Importantly, the method presented detects changes in case
+reserve adequacy from the data, rather than assuming that such changes
+have occurred. In that sense, the methodology is sufficiently general so
+as to be applied even when there are no known instances of case reserve
+adequacy changes, or when we want to use a model to test changes in case
+reserve adequacy.
+
+\section{R Packages}\label{r-packages}
+
+Actuarial Consulting and Chamberlain (2023)
+
+Müller and Wickham (2023)
+
+Gesmann et al. (2024)
 
 \phantomsection\label{refs}
 \begin{CSLReferences}{1}{0}
+\bibitem[\citeproctext]{ref-easyr}
+Actuarial Consulting, Oliver Wyman, and Bryce Chamberlain. 2023.
+\emph{Easyr: Helpful Functions from Oliver Wyman Actuarial Consulting}.
+\url{https://CRAN.R-project.org/package=easyr}.
+
 \bibitem[\citeproctext]{ref-berquist_sherman_1977}
 Berquist, James R., and Richard E. Sherman. 1977. {``Loss Reserve
 Adequacy Testing: A Comprehensive, Systematic Approach.''}
@@ -438,6 +832,10 @@ Carrato, Mario Wuthrich, Fabio Concina, and Eric Dal Moro. 2024.
 \emph{ChainLadder: Statistical Methods and Models for Claims Reserving
 in General Insurance}.
 \url{https://CRAN.R-project.org/package=ChainLadder}.
+
+\bibitem[\citeproctext]{ref-tibble}
+Müller, Kirill, and Hadley Wickham. 2023. \emph{Tibble: Simple Data
+Frames}. \url{https://CRAN.R-project.org/package=tibble}.
 
 \end{CSLReferences}
 
