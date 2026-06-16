@@ -12,7 +12,7 @@ extract_anti_diags <- function(mat) {
 }
 
 plot_bs <- function(case_ratios, stan_object, x_lim) {
-  par(mfcol = c(2, 1))
+  par(mfrow = c(2, 2))
   hist(x = case_ratios, main = 'Observed Case Reserve Ratios', xlab = '', 
     axes = FALSE, xlim = x_lim)
   axis(side = 1, at = axTicks(side = 1), labels = easyr::fmat(x = 
@@ -26,6 +26,11 @@ plot_bs <- function(case_ratios, stan_object, x_lim) {
   axis(side = 1, at = axTicks(side = 1), labels = easyr::fmat(x = 
       axTicks(side = 1), type = '%'))
   axis(side = 2, las = 2)
+  
+  hist(x = rstan::extract(object = stan_out)$trend, 
+    main = 'Fitted Trend Rates', axes = FALSE, , xlab = '')
+  axis(side = 1, at = axTicks(side = 1), labels = easyr::fmat(x = 
+      axTicks(side = 1), type = '%'), xlim = c(0, 0.25))
 }
 
 
@@ -46,4 +51,10 @@ bs_ult <- function(rptd, paid, row_names = NULL) {
   return(matrix_out)
 }
 
-
+plot_ldf <- function(dev_interval){
+  boxplot(formula = log(ldf) ~ dev_int, data = ldfs, 
+    subset = dev_int == dev_interval, main = paste(dev_interval, ':', 
+      dev_interval + 1), axes = FALSE, ylab = 'LDF (log scale)', xlab = '')
+  axis(side = 2, at = axTicks(side = 2), labels = easyr::fmat(x = 
+      axTicks(side = 2) |> exp(), digits = 2))
+}

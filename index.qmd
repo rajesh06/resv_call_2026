@@ -3,7 +3,7 @@ title: "A Bayesian Approach to Address Changes in Claims Handling, Part 1"
 author: "Rajesh Sahasrabuddhe, FCAS, FCIA, MAAA"
 date: today
 abstract: |
-  The seminal paper by James R. Berquist and Richard E. Sherman provided systematic methods for adjusting claim triangles to account for changes in claims handling. Those methods highlighted the dependency of future development on case reserve adequacy and claim settlement rates. The Berquist-Sherman method relies on restating claim triangles based on the data - not a model. In this paper, we present a Bayesian approach to modeling the changes in case reserve adequacy in order to restate the triangle. 
+  The seminal paper by James R. Berquist and Richard E. Sherman provided systematic methods for adjusting claim triangles to account for changes in claims handling. Those methods highlighted the dependency of future development on case reserve adequacy and claim settlement rates. The Berquist-Sherman method relies on restating claim triangles based on the data in the latest diagonal. In this paper, we present a Bayesian approach to modeling the changes in case reserve adequacy in order to restate the triangle. 
 format: 
   pdf:
     toc: true
@@ -22,46 +22,53 @@ bibliography: references.bib
 ## Introduction
 
 \begin{quote}
-It's tough to make predictions, especially about the future. 
+It's tough to make predictions, especially about the future.   
 - Yogi Berra
 \end{quote}
 
-In an actuarial analysis, we need to assess the predictive value of historical data for use in modeling the quantity of interest. In "Loss Reserve Adequacy Testing: A Comprehensive, Systematic Approach" [@berquist_sherman_1977], James R. Berquist and Richard E. Sherman described various investigations that the actuary should undertake to understand (potential) changes in operations that might affect the predictive value of the data. Then, Berquist and Sherman propose approaches to adjust the data to address distortions. They focus on two particular changes in the historical data:
+In an actuarial analysis, we need to assess the predictive value of historical data for use in modeling the quantity of interest. In "Loss Reserve Adequacy Testing: A Comprehensive, Systematic Approach" [@berquist_sherman_1977], James R. Berquist and Richard E. Sherman describe various investigations that the actuary should undertake to understand (potential) changes in operations that might affect the predictive value of the data. Then, Berquist and Sherman propose approaches to adjust the data to address the distortions. They focus on two particular changes in the historical data:
 
 -   Changes in case reserve adequacy
 -   Changes in the claims settlement rate
 
 In each case, they propose an approach to adjust the data to consider these changes in the estimation of unpaid claims. In this paper, we focus on the restatement due to changes in case reserve adequacy.[^1]
 
-[^1]: Part 2 of this paper will address changes in claims settlement rate. I expect to issue Part 2 later in 2026. In addition, we limit the scope to the restatement of the triangle, but do not address the application of actuarial models to the restated triangle.
+[^1]: Part 2 of this paper will address changes in claims settlement rate. I expect to issue Part 2 later in 2026. In addition, we limit the scope to the restatement of the triangle, but do not address the application of actuarial models (e.g., chain ladder, Bornhuetter-Ferguson, etc.) to the restated triangle.
 
-\bs do not include a statistical model (either frequentist or Bayesian) to infer changes in case reserve adequacy. Effectively, \bs assume that the data are 100% signal and 0% noise. The goal of this paper is to propose a statistical model to infer changes in case reserve adequacy.
+\bs do not include a statistical model (either frequentist or Bayesian) to infer changes in case reserve adequacy. Effectively, \bs assume that the data are 100% signal and 0% noise. The goal of this paper is to propose a statistical model to infer the change.
 
 Actuaries generally model relationships using a linear model. A frequentist approach to fitting that model (e.g., least squares) is likely to be problematic with a claims triangle, as there are a limited number of data points relative to the number of parameters. This could result in overfitting or in situations where the model does not properly isolate the effect of each independent variable.
 
 While we don't classify \bs as either frequentist or Bayesian statisticians, we note that the paper places a significant emphasis on understanding changes in company operations. Such an investigation would naturally result in priors for use in a Bayesian model. Those priors also allow for the isolation of variables. In the approach proposed in this paper, we fit a model for emergence using Bayesian Markov-chain Monte Carlo (MCMC) methods.
 
-We also hope that this paper serves as a gentle introduction to fitting Bayesian models via MCMC. The structure of the proposed model is therefore intentionally simple. We also include much of the `R` code in this paper. The complete `R` code underlying this paper is available in a [code repository](https://github.com/rajesh06/resv_call_2026) on the CAS Github site. \[Note to reviewers, I will move this to the CAS GitHub upon completion.\]
+The complete `R` code underlying this paper is available in a [code repository](https://github.com/rajesh06/resv_call_2026) on the CAS Github site. We also include much of the `R` [@r] code in this paper. The code for a few functions included below is not included in the paper, but available in the repository. We also used the `easyr` [@easyr] and the `tidyverse` [@tidyverse] packages in this paper. \[Note to reviewers, I will move this to the CAS GitHub upon completion.\]
+
+We also intend that this paper serves as a gentle introduction to fitting Bayesian models via MCMC using Stan [@rstan]. The structure of the proposed model is therefore intentionally simple.
 
 ## Data
 
-We present our proposed model using data from \bs to enable the reader to compare it with the \bs baseline. Conveniently, the `ChainLadder` [@ChainLadder] package includes the data used in \bs.
+We present our proposed model using data from \bs to enable the reader to compare our results with the \bs baseline. Conveniently, the `ChainLadder` [@ChainLadder] package includes the data used in Berquist-Sherman.
 
 ```{r}
 #| include: false
-easyr::begin()
+easyr::begin(load = NULL)
 ```
 
 ```{r}
 med_mal <- ChainLadder::MedMal
+
+# Name the triangles
 names(med_mal) <- c('rept', 'paid', 'case', 'open')
+
+# Other triangles that we need ----
 med_mal$avg_case <- (med_mal$rept - med_mal$paid) / med_mal$open
 
 med_mal$adj_avg_case <- ChainLadder::inflateTriangle(Triangle =
      med_mal$avg_case, rate = 0.15)
+
 med_mal$adj_rept <- med_mal$adj_avg_case * med_mal$open + med_mal$paid
 
-# Add row and column names
+# Add row and column names ----
 med_mal <- sapply(X = names(med_mal), FUN = function(data_type){
   this_matrix <- med_mal[[data_type]]
   dimnames(this_matrix) <- list('ay' = paste0('ay_', 1969:1976),
@@ -69,13 +76,17 @@ med_mal <- sapply(X = names(med_mal), FUN = function(data_type){
   return(this_matrix)
 }, simplify = FALSE, USE.NAMES = TRUE)
 
+# Latest Diagoonal
 avg_case <- extract_anti_diags(med_mal$avg_case)[1:8]
 names(avg_case) <- paste0('ye_', 1969:1976)
 
 med_mal$adj_rept_df <- med_mal$adj_rept[, 2:8] / med_mal$adj_rept[, 1:7]
 
 colnames(med_mal$adj_rept_df) <- paste0('age_', 12 * 1:7, '_', 12 * 2:8)
- 
+
+# Compare to Exhibit G of B-S, 
+# Incurred Projections,  After Adjustment 
+# (differences due to rounding)
 bs_ult(rptd = med_mal$adj_rept, paid = med_mal$paid)
 
 ```
@@ -96,12 +107,13 @@ $$
 \begin{aligned}
   \bar{c}_{i,j} &= \text{average case reserve for accident year } i \text{ at development age } j\\
 i &\in [1, n]\\
-f_t &= \text{case reserve adequacy factor for calendar year }t\\
 r &= \text{annual inflation rate}\\
 \end{aligned}
 $$
 
-Effectively, \bs do not measure case reserve adequacy using the data. The adjusted case reserves are independent of historical observed case reserves; they are only a function of current case reserves and the inflation rate. \bs also measure case reserve adequacy separately by development lag. However, we believe that it's reasonable to assume that case reserve adequacy is a calendar-year measure that affects all accident years/lags. Similarly, \bs present inflation as an accident year measure. However, because they apply the same inflation rate to all accident years, the \bs treatment is equivalent to a view of inflation as a calendar-year effect, which we believe is more intuitive.
+Effectively, \bs do not measure historical case reserve adequacy using the data. Readers should recall that through their investigations, they are aware that the adequacy has changed, so they focus on restatement of prior diagonals, without consideration of the data in those prior diagonals. That is, the adjusted case reserves are independent of historical observed case reserves; they are only a function of current case reserves and the inflation rate. \bs also measure case reserve adequacy separately by development lag. However, we believe that it's reasonable to assume that case reserve adequacy is a calendar-year measure that affects all accident years/lags. Similarly, \bs present inflation as an accident year measure. However, because they apply the same inflation rate to all accident years, the \bs treatment is equivalent to a view of inflation as a calendar-year effect, which we believe is more intuitive.
+
+In the Bayesian framework proposed in this paper, we use the average case reserves, $\bar{c}$ and $r$, to estimate $f$ $f_t$, the case reserve adequacy factor for calendar year $t$. We present the calcultion of $f$ below.
 
 $$
 \begin{aligned}
@@ -111,7 +123,7 @@ $$
 \end{aligned}
 $$ {#eq-raf}
 
-In the Bayesian framework proposed in this paper, we use the average case reserves, $bar{c}$ and $r$, to estimate $f$. Unlike \bs, we treat $r$ as a free parameter derived from the case reserve data. \bs provide the following discussion on the derivation of $r$.
+In addition, unlike \bs, we treat $r$ as a free parameter derived from the case reserve data. \bs provide the following discussion on the derivation of $r$.
 
 > The severity trends obtained from the fitting of exponential curves to the case reserves per open claim from Exhibit B range from + 27.6% to 34.2%. with the exception of such averages at 12 months of development. In contrast, the severity trends derived from the array of paid losses per closed claim in Exhibit C range from + 6.7% to 14.3%. Furthermore, the traditional approach of estimating the severity trend from the fitting of an exponential curve to calendar year paid losses per closed claim produces a trend of + 15.0% (with a coefficient of determination of .9793).
 >
@@ -123,17 +135,17 @@ As a reminder, we employ a calendar year trend assumption, and through the use o
 
 We can now turn to fitting the Bayesian model. We first need to identify likelihood functions for the observed data and priors for each variable that we need to estimate.
 
--   The ratio of case reserves has a domain of non-negative values. We assume that these ratios are Gamma distributed.
+<!-- -   The ratio of case reserves has a domain of non-negative values. We assume that these ratios are Gamma distributed. -->
 
 -   The inflation rate variable has a domain of real numbers, though we recognize that negative inflation rates are not common. The prior distribution is likely centered a few percentage points above[^2] the underlying rate of economic inflation.[^3] We select a Normal distribution with mean of 15%, and standard deviation of 10%. We define the inflation factor as $1$ plus the factor to inflate the historical case reserves to current cost levels.
 
-[^2]: Actuaries generally expect inflation related to claims to exceed general economic inflation.
+-  We assume that the product of the inflation adjustment and observed case reserve ratios are Gamma distributed. That Gamma distribution represents reserve adequacy factor.
+
+[^2]: Actuaries generally expect claim inflation to exceed general economic inflation.
 
 [^3]: \bs is a 1977 paper. We assume that the research and writing occurred in the mid-1970s. The underlying inflation rate in that period was both high and volatile.
 
-We therefore assume that the product of the inflation adjustment and observed case reserve ratios are Gamma distributed. That Gamma distribution represents reserve adequacy factor.
-
-To provide a more intuitive understanding, we first present the fitting of the Bayesian model to the observed ratio of average case reserves at year-end 1975 and average case reserves at year-end 1976. (Year-end 1976 is the current valuation of the data in \bs.) We present the Stan script for this model below.
+To provide a more intuitive understanding, we first present the fitting of the Bayesian model to the observed ratio of average case reserves at year-end 1975 and average case reserves at year-end 1976. (Year-end 1976 is the current valuation of the data in Berquist-Sherman.) We present the Stan script for this model below.
 
 ``` stan
 // The input data is a vector 'case ratios' of length 'N', and the 
@@ -167,22 +179,33 @@ model {
 ```{r}
 #| message: false
 #| warning: false 
+
+# There is a low probability that the initial trend value will be negative
+initf <- function() {list(trend = runif(n = 1, min = 0, max = 0.30))}
+
 stan_out <- rstan::stan(file = 
     'C:/Users/rajes/OneDrive/Actuarial Research/resv_call_2026/src/case_adj.stan', 
   model_name = 'berquist sherman case adj', seed = 14159, data = list(
     'proj_length' = 1,
     'case_ratios' = avg_case$ye_1975 / avg_case$ye_1976[1:7], 'N' = 7), 
+  init = initf,
   par = c('trend', 'alpha', 'beta'), chains = 3, iter = 4e3, warmup = 1e3)
+```
+We can then extract the trend and adjustment factors from the MCMC fit.
+
+````{r}
 
 adj_76_75 <- tibble::tibble(trend = rstan::extract(object = stan_out)$trend,
   alpha = rstan::extract(object = stan_out)$alpha,
   beta = rstan::extract(object = stan_out)$beta)
 
 rstan::extract(object = stan_out)$trend |> mean()
-(rstan::extract(object = stan_out)$alpha / rstan::extract(object = stan_out)$beta) |> mean()
-```
+(rstan::extract(object = stan_out)$alpha / 
+    rstan::extract(object = stan_out)$beta) |> mean()
+````
 
-Below, we present a comparison of the observed and modeled case reserve ratios.
+
+Below, we present a comparison of the observed and modeled case reserve ratios and the modeled distribution of trend rates.
 
 ```{r}
 #| fig-height: 6
@@ -191,7 +214,7 @@ plot_bs(case_ratios = avg_case$ye_1975 / avg_case$ye_1976[1:7],
   stan_object = stan_out, x_lim = c(0.60, 1))
 ```
 
-We can then repeat this process for the prior diagonals. The syntax is similar to that in the code block above, with the resulting `adj_76_X` object being a data frame of the the the fitted trend rate, and \alpha (shape) and \beta (rate) parameters of the Gamma distribution. We do not fit a model for the 1970 and 1969 diagonals, which only have 2 and 1 observations respectively.
+We can then repeat this process for the prior diagonals. The syntax is similar to that in the code block above, with the resulting `adj_76_X` object being a data frame of the the the fitted trend rate, and \alpha (shape) and \beta (rate) parameters of the Gamma distribution. We do not fit a model for the 1970 and 1969 diagonals, which only have 2 and 1 observations respectively. In order to avoid repetition, we do not include the code for the fitting to prior diagonals in this paper. Interested readers can access the code in the code repository.
 
 ```{r}
 #| message: false
@@ -201,7 +224,7 @@ stan_out <- rstan::stan(file =
     'C:/Users/rajes/OneDrive/Actuarial Research/resv_call_2026/src/case_adj.stan', 
   model_name = 'berquist sherman case adj', seed = 14159, data = list(
     'proj_length' = 2, 
-    'case_ratios' = avg_case$ye_1974 / avg_case$ye_1976[1:6], 'N' = 6), 
+    'case_ratios' = avg_case$ye_1974 / avg_case$ye_1976[1:6], 'N' = 6),
   par = c('trend', 'alpha', 'beta'), chains = 3, iter = 4e3, warmup = 1e3)
 
 adj_76_74 <- tibble::tibble(trend = rstan::extract(object = stan_out)$trend,
@@ -269,7 +292,7 @@ We can now use the fitted Bayesian models to adjust the data in the triangles. W
 
 -   We could restate prior diagonals by detrending current case reserves using the fitted trend factor.
 
-We prefer the first option as it better incorporates historical variability. Since we fit a Bayesian model, we have a posterior distribution for the trend rate and a posterior predictive distribution for the reserve adequacy factor. We present the code for the first option below.
+We prefer the first option as it better incorporates historical variability. Since we fit a Bayesian model, we have a posterior distribution for the trend rate and a posterior predictive distribution for the reserve adequacy factor. We present the code for the first option below. (Recall that we generated 3 chains with 4,000 samples each for our posterior; 1,000 of those samples were warm-up samples, so we have 9,000 = 3 \times~(4,000 - 1,000) samples.)
 
 ```{r}
 adj_rptd <- lapply(X = 1:9000, FUN = function(x){
@@ -342,7 +365,7 @@ adj_rptd <- lapply(X = 1:9000, FUN = function(x){
 
 ## Comparison to \bs Development Factors
 
-We can now compare our modeled development factors to those from \bs, which we indicate with the red circles.
+We can now compare our modeled development factors to those from \bs, which we indicate with the red circles. (We present the data on a log scale to better show outliers. As we'd expect, with 9,000 simulated outcomes, we will have several outliers; however most of the posterior sames are consistent with the \bs development factors.)
 ```{r}
 ldfs <- lapply(X = 1:5, FUN = function(dev_int){
   ldf <- sapply(X = adj_rptd , FUN = function(x){
@@ -352,26 +375,20 @@ ldfs <- lapply(X = 1:5, FUN = function(dev_int){
 }) |> dplyr::bind_rows()
 
 par(mfcol = c(1, 5))
-boxplot(formula = ldf ~ dev_int, data = ldfs, subset = dev_int == 1, main = '1:2')
-points(x = 1, y = 3.901825334, col = 'red', cex = 1.5)
-boxplot(formula = ldf ~ dev_int, data = ldfs, subset = dev_int == 2, main = '2:3')
-points(x = 1, y = 1.526912442, col = 'red', cex = 1.5)
-boxplot(formula = ldf ~ dev_int, data = ldfs, subset = dev_int == 3, main = '3:4')
-points(x = 1, y = 1.334693047, col = 'red', cex = 1.5)
-boxplot(formula = ldf ~ dev_int, data = ldfs, subset = dev_int == 4, main = '4:5')
-points(x = 1, y = 0.928818739, col = 'red', cex = 1.5)
-boxplot(formula = ldf ~ dev_int, data = ldfs, subset = dev_int == 5, main = '5:6')
-points(x = 1, y = 1.062621943, , col = 'red', cex = 1.5)
+plot_ldf(dev_interval = 1)
+points(x = 1, y = log(3.901825334), col = 'red', cex = 1.5, xlab = '')
+plot_ldf(dev_interval = 2)
+points(x = 1, y = log(1.526912442), col = 'red', cex = 1.5)
+plot_ldf(dev_interval = 3)
+points(x = 1, y = log(1.334693047), col = 'red', cex = 1.5)
+plot_ldf(dev_interval = 4)
+points(x = 1, y = log(0.928818739), col = 'red', cex = 1.5)
+plot_ldf(dev_interval = 5)
+points(x = 1, y = log(1.062621943), , col = 'red', cex = 1.5)
 ```
 
 
 ## Conclusions
 We believe that actuaries are generally hesitant to apply \bs adjustments as they view the underlying assumption of 100% data credibility as unreasonable, particularly for small sample sizes. In this paper, we presented a model for the \bs case reserve adequacy adjustments. The model infers these changes from the data, rather than assuming 100% data credibility. This approach not only provides a modeled basis for \bs adjustments, but also results in a distribution of development factors that can be used to develop a distribution of reserves. Importantly, the method presented detects changes in case reserve adequacy from the data, rather than assuming that such changes have occurred. In that sense, the methodology is sufficiently general so as to be applied even when there are no known instances of case reserve adequacy changes, or when we want to use a model to test changes in case reserve adequacy.
 
-## R Packages
-
-@easyr
-
-@tibble
-
-@ChainLadder
+## References and R Packages
